@@ -63,12 +63,14 @@ Create an active branch ruleset for `main` with at least:
 - dismiss stale approvals when new commits are pushed;
 - require approval of the most recent reviewable push where available;
 - require conversation resolution;
-- require the `pr-security-gate` and `skill-integrity` status checks where the GitHub UI permits the relevant event/check configuration;
+- require `pr-security-gate` as the pre-merge status check;
 - require branches to be up to date before merge when practical;
 - block force pushes;
 - block branch deletion;
 - do not allow bypass except for an intentionally limited emergency path;
 - require signed commits if compatible with the maintainer workflow.
+
+`skill-integrity` currently runs on trusted `push` to `main`, scheduled runs, and manual runs. Treat it as a post-merge/maintenance invariant, not as a required PR check unless the workflow is deliberately redesigned to produce a safe PR status without executing untrusted code.
 
 `CODEOWNERS` without a ruleset/protected-branch requirement is advisory only and is not a merge barrier.
 
