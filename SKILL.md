@@ -59,16 +59,27 @@ Do not invent a confirmation ceremony when the user's write intent and target en
 
 Read only the references needed for the current task.
 
-## Architecture decision order
+## Responsibility boundaries
 
-When deciding where logic belongs, prefer this boundary:
+Do not rank CX Agent Studio control surfaces as a universal strongest-to-weakest hierarchy. Tools, callbacks, Handoff Rules, instructions, and backend services operate at different ownership and lifecycle boundaries.
 
-1. **Authoritative backend or service** — business state, authorization, irreversible actions, regulated decisions, idempotency, durable workflow state.
-2. **Tool implementation** — deterministic integration logic and response minimization.
-3. **Callback** — deterministic validation/interception around agent/model/tool execution.
-4. **Handoff rule** — deterministic parent/child transfer conditions.
-5. **Agent instruction** — conversational policy, tool-selection guidance, flexible orchestration.
-6. **Model inference** — only where probabilistic interpretation is acceptable.
+Choose the mechanism that owns the requirement:
+
+| Responsibility | Default owner / mechanism |
+|---|---|
+| Authorization, regulated decisions, durable or irreversible business state, idempotency | Authoritative backend/service |
+| External integration and deterministic transformation inside an invoked capability | Tool implementation |
+| Lifecycle interception, normalization, validation around agent/model/tool execution, output filtering | Callback |
+| Guaranteed parent/child agent transfer condition | Handoff Rule |
+| Conversational policy, flexible orchestration, tool-selection guidance | Agent instruction |
+| Semantic interpretation where ambiguity is acceptable | Model inference |
+
+Important distinctions:
+
+- A tool's internals can be deterministic while the model's decision to call that tool, its predicted arguments, and its interpretation of the result can remain probabilistic.
+- A callback provides deterministic lifecycle control, but it is not a generic replacement for a Handoff Rule whose specific job is deterministic parent/child transfer.
+- Static variables and global instructions can make stable policy visible to the model; visibility in the prompt is not the same as authoritative enforcement.
+- The backend/service remains the trust boundary for requirements that must hold even if the conversation, model, callback, or client behaves incorrectly.
 
 Do not move authoritative state into conversation history merely because the model can remember it.
 
