@@ -122,11 +122,12 @@ def probe_link(url: str, timeout: float = 15.0) -> tuple[str, str | None]:
             except urllib.error.URLError as get_exc:
                 return "warn", str(get_exc.reason)
 
+        # Only terminal not-found statuses prove that a documentation link is broken.
+        # Authentication, rate limiting, anti-bot behavior, redirects handled by urllib,
+        # service errors, and other HTTP responses need human review rather than a hard fail.
         if exc.code in (404, 410):
             return "broken", str(exc.code)
-        if exc.code == 429 or exc.code >= 500 or exc.code in (401, 403):
-            return "warn", str(exc.code)
-        return "broken", str(exc.code)
+        return "warn", str(exc.code)
     except urllib.error.URLError as exc:
         return "warn", str(exc.reason)
     except TimeoutError:
