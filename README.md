@@ -2,7 +2,19 @@
 
 A focused engineering skill for designing, implementing, reviewing, debugging, securing, evaluating, versioning, and deploying applications built with **Google Cloud Customer Experience Agent Studio (CX Agent Studio)**.
 
-This repository is intentionally generic: it contains product-oriented guidance and decision frameworks rather than project-specific business rules.
+This repository is intentionally generic across industries, but deliberately **specific to CX Agent Studio** rather than to conversational AI or Google Cloud as a whole.
+
+## Scope
+
+Use this skill when CX Agent Studio is the primary subject or a material integration/migration target, including:
+
+- building or reviewing a CX Agent Studio application;
+- configuring its agents, tools, state, callbacks, handoffs, guardrails, knowledge, evaluations, versions, or deployment channels;
+- integrating CX Agent Studio with external APIs, MCP servers, knowledge sources, or supported channels/platforms;
+- integrating/migrating Dialogflow CX flows into or with CX Agent Studio;
+- automating CX Agent Studio resources through its REST/RPC APIs or official MCP server.
+
+Do **not** use it as the primary skill for standalone Dialogflow CX, generic MCP, generic Google Cloud IAM/networking/security, Agent Assist, or CX Insights work when CX Agent Studio is not materially involved.
 
 ## Install
 
@@ -19,12 +31,13 @@ npx skills add yuzokamoto/google-cx-agent-studio-skill
 - OpenAPI, Python, MCP, Client Function, Data Store, File Search, Google Search, connectors, system/widget tools, and agent-as-a-tool
 - Synchronous versus asynchronous tool execution
 - Static and dynamic variables, session context injection, callbacks, and deterministic control
+- Fallback behavior, retries, tool/integration failures, business-negative outcomes, and escalation/end-session boundaries
 - Knowledge grounding and the boundary between RAG and authoritative transactional data
 - Prompt Guard, blocklists, safety, rules, logging/redaction, authentication, networking, and security boundaries
 - Golden and scenario evaluations, expectations, Simulator traces, and regression workflows
-- Versions, export/import, Git workflows, environment-specific configuration, Web Widget deployment, and traffic splitting
-- Dialogflow CX flow-based agents and migration considerations
-- REST API and the official CX Agent Studio MCP server for administration/automation
+- Versions, export/import, Git workflows, environment-specific configuration, Web/API/platform deployment, and traffic splitting
+- Dialogflow CX flow-based agents and migration considerations **as they relate to CX Agent Studio**
+- CX Agent Studio REST/RPC APIs and official MCP server for administration/automation
 
 ## Structure
 
@@ -40,6 +53,7 @@ google-cx-agent-studio-skill/
     ├── tools.md
     ├── knowledge-grounding.md
     ├── state-callbacks-determinism.md
+    ├── error-handling.md
     ├── security-and-guardrails.md
     ├── evaluations-debugging.md
     ├── versioning-deployment.md
@@ -83,9 +97,9 @@ Because CX Agent Studio changes quickly, the skill instructs agents to re-check 
 Do not treat these names as synonyms:
 
 - **CX Agent Studio** — the generative, agent-oriented application builder covered by this skill.
-- **Dialogflow CX** — a flow/page/intent-oriented conversational platform that can be integrated through flow-based agents.
-- **Agent Assist** — capabilities for assisting human agents; related to Google Cloud contact-center products but not equivalent to CX Agent Studio.
-- **CX Insights** — contact-center conversation analytics/insights; related but distinct from CX Agent Studio.
+- **Dialogflow CX** — a flow/page/intent-oriented conversational platform that is in scope here only when integrating/migrating with CX Agent Studio.
+- **Agent Assist** — capabilities for assisting human agents; in scope here only when the CX Agent Studio boundary/integration is the question.
+- **CX Insights** — contact-center conversation analytics/insights; in scope here only when the CX Agent Studio boundary/integration is the question.
 
 ## Sources
 
