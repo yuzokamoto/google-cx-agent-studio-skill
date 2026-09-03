@@ -24,6 +24,42 @@ Compatible agent-skill clients can install this repository directly, for example
 npx skills add yuzokamoto/google-cx-agent-studio-skill
 ```
 
+### Manual import without `npx`
+
+If the target environment does not support `npx skills add`, clone or download the repository and copy the skill files into the skill directory recognized by that environment.
+
+```bash
+git clone https://github.com/yuzokamoto/google-cx-agent-studio-skill.git
+cd google-cx-agent-studio-skill
+```
+
+For runtime use, keep `SKILL.md` and the complete `references/` directory together under one skill directory. Do not flatten or rename the reference files, because `SKILL.md` routes the agent to those relative paths.
+
+```text
+google-cx-agent-studio-skill/
+├── SKILL.md
+└── references/
+    ├── source-policy.md
+    ├── agents-and-handoffs.md
+    ├── instructions.md
+    ├── tools.md
+    ├── python-runtime.md
+    ├── knowledge-grounding.md
+    ├── state-callbacks-determinism.md
+    ├── error-handling.md
+    ├── security-and-guardrails.md
+    ├── evaluations-debugging.md
+    ├── versioning-deployment.md
+    ├── flows-and-migration.md
+    └── api-and-automation.md
+```
+
+Copy that directory to the location where your agent runtime loads skills. The exact destination is runtime-specific; configure the runtime so that `SKILL.md` is the entry point for this skill and the sibling `references/` directory remains accessible by relative path.
+
+Repository-maintenance files such as `.github/`, `scripts/`, `CONTRIBUTING.md`, and `SECURITY.md` are not required for runtime skill loading. Agent-specific repository policy files such as `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` should only be imported when the target runtime explicitly uses those instruction surfaces.
+
+For reproducible or production environments, prefer importing from a reviewed tag or pinned commit instead of continuously consuming the mutable `main` branch.
+
 ## What it covers
 
 - Root agents, sub-agents, descriptions, routing, and deterministic handoff rules
