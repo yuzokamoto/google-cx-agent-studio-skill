@@ -20,7 +20,7 @@ npx skills add yuzokamoto/google-cx-agent-studio-skill
 - Synchronous versus asynchronous tool execution
 - Static and dynamic variables, session context injection, callbacks, and deterministic control
 - Knowledge grounding and the boundary between RAG and authoritative transactional data
-- Prompt Guard, blocklists, safety, rules, logging/redaction, authentication, and security boundaries
+- Prompt Guard, blocklists, safety, rules, logging/redaction, authentication, networking, and security boundaries
 - Golden and scenario evaluations, expectations, Simulator traces, and regression workflows
 - Versions, export/import, Git workflows, environment-specific configuration, Web Widget deployment, and traffic splitting
 - Dialogflow CX flow-based agents and migration considerations
@@ -31,6 +31,8 @@ npx skills add yuzokamoto/google-cx-agent-studio-skill
 ```text
 google-cx-agent-studio-skill/
 ├── SKILL.md
+├── scripts/
+│   └── check_skill_integrity.py
 └── references/
     ├── source-policy.md
     ├── agents-and-handoffs.md
@@ -49,9 +51,9 @@ The main skill routes the agent to only the references needed for the task, avoi
 
 ## Design principles
 
-1. Official Google Cloud documentation is the product source of truth.
+1. Official Google Cloud documentation is the product source of truth for platform behavior, using the source appropriate to the type of claim.
 2. Runtime behavior is verified from Simulator traces, API responses, or exported configuration instead of guessed.
-3. Deterministic requirements are enforced in deterministic layers.
+3. Deterministic requirements are enforced by the layer that owns the responsibility.
 4. Agents receive the minimum useful context and tool surface.
 5. RAG is not treated as a transactional system of record.
 6. Evaluations are part of implementation, not an optional final step.
@@ -59,19 +61,22 @@ The main skill routes the agent to only the references needed for the task, avoi
 
 ## Platform snapshot used for this audit
 
-This version was reviewed on **2026-09-03** against the current CX Agent Studio documentation and release notes available at that date. Notable capabilities added after the March 2026 baseline used as inspiration include:
+This version was reviewed on **2026-09-03** against the current CX Agent Studio documentation and release notes available at that date.
 
-- static and dynamic variables;
-- synchronous and asynchronous tool execution;
-- agent-as-a-tool;
-- custom HTTP headers for MCP tools;
-- Google Maps, Confluence, Jira, and SharePoint tools;
-- evaluation import/export;
-- deployment traffic splitting;
-- application/tool export-import improvements and environment-specific dependencies;
-- the official CX Agent Studio MCP server for programmatic administration.
+Dated CX Agent Studio release notes explicitly establish these post-March-2026 additions:
 
-Because CX Agent Studio changes quickly, the skill instructs agents to re-check official docs and release notes for time-sensitive claims.
+- static and dynamic variables — April 13;
+- synchronous and asynchronous tool execution — April 17;
+- agent-as-a-tool — April 17;
+- configurable fallback behavior — April 20;
+- custom HTTP headers for MCP tools — May 8;
+- Google Maps, Confluence, Jira, and SharePoint tools — May 26;
+- evaluation import/export — June 8;
+- deployment traffic splitting — July 1.
+
+The current platform also documents capabilities that were absent from, or not covered by, the March 2026 baseline used as inspiration, including current export/import environment handling and the official CX Agent Studio MCP server. This wording does **not** claim a post-March release date where the release notes used for this audit do not establish one.
+
+Because CX Agent Studio changes quickly, the skill instructs agents to re-check official docs and release notes for time-sensitive claims. Repository integrity/freshness checks make an aging audit snapshot visible, but they do not auto-update product facts.
 
 ## Product boundaries
 
@@ -91,7 +96,13 @@ Primary documentation:
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/best-practices
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/export
 
-See `references/source-policy.md` for the source hierarchy used by the skill.
+See `references/source-policy.md` for claim-type evidence routing and freshness rules.
+
+## Maintenance
+
+The repository includes a lightweight integrity checker. It validates the basic skill frontmatter, routed reference files, and audit-age threshold on normal CI runs. A scheduled workflow also probes official Google Cloud documentation links and treats transient network/service failures as warnings rather than rewriting or silently invalidating product content.
+
+The checks are intentionally conservative: a stale snapshot or broken reference should trigger human review, not an automated documentation rewrite.
 
 ## Acknowledgement
 
