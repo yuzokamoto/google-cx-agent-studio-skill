@@ -32,7 +32,7 @@ https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool
 | Need | Default choice |
 |---|---|
 | Call a clean external HTTP API with an explicit contract | OpenAPI |
-| Reduce/transform a large API response or implement deterministic local glue | Python |
+| Reduce/transform a large API response or implement deterministic local glue | Python, **only when the required network path is supported** |
 | Use an existing standardized MCP server | MCP |
 | Run functionality in the end-user/client application | Client function |
 | Search governed enterprise/web/document data stores | Data Store |
@@ -43,7 +43,38 @@ https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool
 | End session or invoke built-in session behavior | System tool |
 | Produce supported rich interaction behavior | Widget tool |
 
-Do not choose a tool type solely because it is newer. Prefer the smallest interface that matches the ownership and security boundary.
+Do not choose a tool type solely because it is newer. Prefer the smallest interface that matches the ownership, network, authentication, latency, data-exposure, and governance boundaries.
+
+## Network reachability is a hard constraint
+
+Do not recommend a tool type until you know how the target endpoint is reached.
+
+At the 2026-09-03 audit, Google's outbound-networking documentation states:
+
+| CX Agent Studio feature | Private network access | Public internet |
+|---|---:|---:|
+| OpenAPI | Supported | Supported |
+| MCP server | Supported | Supported |
+| Salesforce tool | Supported | Supported |
+| ServiceNow tool | Supported | Supported |
+| Python code tool | **Not supported** | Supported |
+| Python callback | **Not supported** | Supported |
+
+Private network access for supported tools is based on Service Directory. Current documented limitations include that Service Directory is regional, each CX Agent Studio application is limited to one Service Directory configuration, and Service Directory does not support targeting a PSC endpoint.
+
+This compatibility can change. Verify the current outbound-networking page before finalizing enterprise architecture:
+https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/network/outbound
+
+Use tool selection as a multidimensional decision:
+
+1. **Capability fit** — what contract or logic is needed?
+2. **Network reachability** — public internet, private VPC, on-premises, multicloud, fixed-egress requirement?
+3. **Authentication** — what identity/token mechanism does the target require?
+4. **Latency/execution mode** — sync versus async and expected timeout behavior?
+5. **Model exposure** — what inputs/outputs enter model context?
+6. **Governance/ownership** — which system owns authorization, state, auditing, and retries?
+
+A Python wrapper can be semantically attractive and still be the wrong architecture if the target is private-only. In that case, prefer a currently supported private-network-capable integration such as OpenAPI or MCP, or place the transformation behind an appropriate reachable service boundary.
 
 ## Synchronous versus asynchronous execution
 
@@ -96,6 +127,7 @@ https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/open-api
 - Use backend HTTP status codes consistently.
 - Do not return internal scores, debug fields, or sensitive metadata unless the agent genuinely needs them.
 - Revalidate security/business inputs in the backend even if a callback validates them first.
+- If the endpoint is private, verify the current Service Directory/private-network configuration requirements before implementation.
 
 ### Session context injection
 
@@ -135,10 +167,16 @@ Python tools are useful for deterministic logic and context engineering.
 Good uses:
 
 - normalize or validate inputs before an external operation;
-- call supported external services using the platform runtime;
-- wrap a noisy OpenAPI/backend response and return a minimal structure;
+- call **publicly reachable** external services using the platform runtime;
+- wrap a noisy OpenAPI/backend response and return a minimal structure when the runtime can reach the dependency;
 - chain a deterministic sequence of tool calls when doing so reduces model round-trips;
 - update dynamic session variables where appropriate.
+
+Current documented networking constraint: Python code tools cannot use CX Agent Studio Private network access, cannot directly access private IP addresses, and cannot resolve private DNS domains even when Service Directory is configured. They can access public internet endpoints. Python callbacks have the same public-only/private-unavailable distinction in the current outbound-networking documentation.
+
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/python
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/network/outbound
 
 Do not move durable business state or authorization logic into a Python tool merely because it is convenient. The Python runtime is an execution helper, not a substitute for an authoritative backend.
 
@@ -171,10 +209,12 @@ Current documented constraints and behavior include:
 - MCP tools use the same authentication options as OpenAPI tools;
 - custom HTTP headers can be supplied from session variables;
 - test the MCP server independently before adding it to an agent;
-- for Cloud Run-hosted MCP servers, Google recommends Service Agent ID Token and the appropriate Cloud Run invoker permission for the CX Agent Studio service agent.
+- for Cloud Run-hosted MCP servers, Google recommends Service Agent ID Token and the appropriate Cloud Run invoker permission for the CX Agent Studio service agent;
+- private-network access is supported when configured through the currently documented Service Directory path.
 
-Reference:
-https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/mcp
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/mcp
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/network/outbound
 
 ### MCP decision rule
 
@@ -228,13 +268,15 @@ Review:
 - Can context injection supply any arguments deterministically?
 - Is the output minimal?
 - Should execution be sync or async?
+- **Can the selected tool/runtime reach the target network path?**
+- If private connectivity is required, is the currently supported Service Directory/private-network architecture valid for this tool type?
 - Are retries/idempotency handled by the authoritative system?
 - Is authentication least-privilege?
 - Are tool failures covered by evaluations?
 
 ## Testing workflow
 
-1. Test the external API/server independently.
+1. Test the external API/server independently from the network environment it is expected to use.
 2. Test the tool directly with **Test Tool**.
 3. Test through **Preview agent**.
 4. Inspect Steps/trace for the exact model call, arguments, result, and callbacks.
