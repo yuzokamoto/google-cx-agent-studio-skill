@@ -95,7 +95,7 @@ See `references/source-policy.md` for the source hierarchy used by the skill.
 
 ## Acknowledgement
 
-The initial scope was audited against the public `Yash-Kavaiya/cx-agent-studio-skill` repository, whose README stated a March 2026 documentation sync. This repository is independently rewritten, reorganized, and updated rather than reproducing that skill textually.
+The initial scope was audited against the public `[Yash-Kavaiya/cx-agent-studio-skill](https://github.com/Yash-Kavaiya/cx-agent-studio-skill)` repository, whose README stated a March 2026 documentation sync. This repository is independently rewritten, reorganized, and updated rather than reproducing that skill textually.
 
 ## License
 
