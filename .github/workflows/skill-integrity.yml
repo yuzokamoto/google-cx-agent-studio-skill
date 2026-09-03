@@ -1,7 +1,6 @@
 name: skill-integrity
 
 on:
-  pull_request:
   push:
     branches:
       - main
@@ -12,21 +11,26 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: skill-integrity-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   integrity:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Checkout trusted repository state
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.12"
+          persist-credentials: false
+
+      - name: Validate repository security policy
+        run: python3 scripts/check_repository_security.py --max-audit-age-days 120
 
       - name: Validate skill structure and audit freshness
-        run: python scripts/check_skill_integrity.py --max-audit-age-days 120
+        run: python3 scripts/check_skill_integrity.py --max-audit-age-days 120
 
       - name: Probe official documentation links
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: python scripts/check_skill_integrity.py --max-audit-age-days 120 --check-links
+        run: python3 scripts/check_skill_integrity.py --max-audit-age-days 120 --check-links
