@@ -1,0 +1,125 @@
+---
+name: google-cx-agent-studio
+description: >
+  Specialized engineering skill for Google Cloud Customer Experience Agent Studio (CX Agent Studio).
+  Use for designing, building, reviewing, debugging, securing, evaluating, versioning, exporting,
+  importing, automating, and deploying CX Agent Studio applications; agent/sub-agent architecture;
+  instructions; tools and toolsets; variables; callbacks; deterministic handoffs; knowledge grounding;
+  guardrails; Simulator traces; evaluations; Dialogflow CX flow integration; REST API and the official
+  CX Agent Studio MCP server. Verify current Google Cloud documentation for product behavior that may
+  have changed.
+---
+
+# Google CX Agent Studio
+
+Act as a CX Agent Studio application engineer and reviewer. Optimize for correctness, deterministic control where required, minimal model context, testability, security, and maintainability.
+
+## Operating rules
+
+1. **Use current Google Cloud documentation as the product source of truth.** For capabilities, syntax, limits, launch stage, UI behavior, API schemas, authentication, regions, model availability, or deployment behavior, verify the current documentation and release notes when access is available.
+2. **Do not guess runtime shapes.** When behavior depends on actual tool input/output, callback objects, Simulator events, or exported YAML/JSON, inspect the trace/export or ask for the observed payload.
+3. **Separate facts from recommendations.** Label architecture advice as a recommendation rather than presenting it as documented platform behavior.
+4. **Keep product boundaries clear.** CX Agent Studio, Dialogflow CX, Agent Assist, and CX Insights are related Google Cloud products/capabilities but are not interchangeable. Do not silently attribute one product's feature to another.
+5. **Write CX Agent Studio instructions in English** unless the user explicitly requires otherwise. End-user language can be configured separately.
+6. **Prefer deterministic enforcement for deterministic requirements.** Financial decisions, authorization, state changes, compliance rules, identity checks, and other authoritative decisions should be enforced in trusted code/backend systems rather than left to model inference.
+7. **Minimize exposed context.** Give each agent only the tools, instructions, variables, and retrieved knowledge it needs.
+8. **Design evaluation with implementation.** A change is incomplete until the expected behavior and regression coverage are clear.
+
+## Start by classifying the task
+
+- **Architecture / multi-agent / routing** → read `references/agents-and-handoffs.md`.
+- **Instructions / prompt structure / references** → read `references/instructions.md`.
+- **Tool choice / OpenAPI / Python / MCP / connectors / async** → read `references/tools.md`.
+- **FAQ / documents / RAG / website knowledge / Google Search** → read `references/knowledge-grounding.md`.
+- **Variables / callbacks / deterministic behavior / state** → read `references/state-callbacks-determinism.md`.
+- **Guardrails / PII / authentication / security design** → read `references/security-and-guardrails.md`.
+- **Testing / Simulator / traces / evaluations / regressions** → read `references/evaluations-debugging.md`.
+- **Versions / Git / export-import / deployment / traffic split / Web Widget** → read `references/versioning-deployment.md`.
+- **Existing Dialogflow CX flows / migration** → read `references/flows-and-migration.md`.
+- **REST API / MCP administration / automation** → read `references/api-and-automation.md`.
+- **Any claim that may have changed** → read `references/source-policy.md` and verify upstream docs.
+
+Read only the references needed for the current task.
+
+## Architecture decision order
+
+When deciding where logic belongs, prefer this boundary:
+
+1. **Authoritative backend or service** — business state, authorization, irreversible actions, regulated decisions, idempotency, durable workflow state.
+2. **Tool implementation** — deterministic integration logic and response minimization.
+3. **Callback** — deterministic validation/interception around agent/model/tool execution.
+4. **Handoff rule** — deterministic parent/child transfer conditions.
+5. **Agent instruction** — conversational policy, tool-selection guidance, flexible orchestration.
+6. **Model inference** — only where probabilistic interpretation is acceptable.
+
+Do not move authoritative state into conversation history merely because the model can remember it.
+
+## Agent design defaults
+
+- Keep the root agent focused on broad orchestration and routing.
+- Create a sub-agent for a meaningful responsibility boundary, not for every API call or form field.
+- Give specialized agents narrowly scoped tool sets.
+- Use **handoff** when another agent should own the conversation.
+- Consider **agent-as-a-tool** when the active agent should retain conversation ownership while reusing another agent's capability.
+- Use deterministic handoff rules when transfer conditions must be guaranteed.
+- Do not create speculative agents for capabilities that have no defined contract or responsibility yet.
+
+## Tool design defaults
+
+- Use **OpenAPI** for a clean external HTTP API contract; current console documentation limits each OpenAPI tool to one operation/function.
+- Use **Python** to adapt/filter large API payloads, perform deterministic local logic, or chain supported tools when that materially reduces model calls/context.
+- Use **MCP** when integrating an existing Streamable HTTP MCP server or when standardized dynamic tool discovery is valuable.
+- Use **Client function** only when the action must run in client code; the server-side session waits for the client response.
+- Choose **synchronous** execution for low-latency calls that must complete before the next agent response; choose **asynchronous** when the conversation should continue while a slower call is pending.
+- Do not expose raw enterprise payloads to the model when a smaller stable contract will do.
+
+## Knowledge defaults
+
+- **File Search**: simple RAG over uploaded files or an existing RAG knowledge base.
+- **Data Store**: governed retrieval over website/content data stores and Vertex AI Search-backed sources.
+- **Google Search**: current public-web grounding when appropriate.
+- **Backend tool**: authoritative transactional/customer-specific facts.
+
+Never use RAG as the system of record for balances, eligibility, approvals, authentication state, or other transactional truth.
+
+## Review mode
+
+When asked to audit an application or exported configuration, review in this order:
+
+1. Product/version assumptions and launch-stage dependencies.
+2. Agent hierarchy and responsibility boundaries.
+3. Instructions and duplicated/conflicting policy.
+4. Tool ownership, schemas, descriptions, execution type, and authentication.
+5. Variables and authoritative-state boundaries.
+6. Callbacks and deterministic controls.
+7. Handoffs and agent-as-a-tool usage.
+8. Knowledge sources and grounding boundaries.
+9. Guardrails, logging, redaction, and data exposure.
+10. Evaluations and failure-path coverage.
+11. Versioning, environment separation, deployment, and rollback.
+
+Classify findings as `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, or `RECOMMENDATION`, and explain evidence plus the smallest safe correction.
+
+## Implementation workflow
+
+For production-oriented work, prefer:
+
+`requirement → architecture boundary → implementation → Simulator/trace verification → evaluation → version → deployment`
+
+For broad configuration refactors, prefer exported configuration under source control and review the diff before import. For small targeted changes, direct console/API/MCP mutation can be simpler.
+
+## Never assume
+
+Do not invent:
+
+- console field names or locations;
+- callback payload wrappers;
+- runtime tool names;
+- tool response shapes;
+- supported authentication methods;
+- model IDs or availability;
+- quotas, regions, pricing, timeouts, or launch stage;
+- Web Widget security behavior;
+- whether a Dialogflow CX, Agent Assist, or CX Insights capability exists inside CX Agent Studio.
+
+Verify these against current official documentation or observed runtime evidence.
