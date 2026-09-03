@@ -95,8 +95,10 @@ Do not move authoritative state into conversation history merely because the mod
 
 ## Tool design defaults
 
+- Select tools only after checking **capability fit, network reachability, authentication, latency/execution mode, model data exposure, and governance ownership**.
 - Use **OpenAPI** for a clean external HTTP API contract; current console documentation limits each OpenAPI tool to one operation/function.
-- Use **Python** to adapt/filter large API payloads, perform deterministic local logic, or chain supported tools when that materially reduces model calls/context.
+- Use **Python** to adapt/filter large API payloads, perform deterministic local logic, or chain supported tools when that materially reduces model calls/context **and the runtime can reach every required dependency**.
+- Current networking documentation supports private network access for OpenAPI and MCP through the documented Service Directory path, but not for Python code tools or Python callbacks. Re-check before relying on this because connectivity support is time-sensitive.
 - Use **MCP** when integrating an existing Streamable HTTP MCP server or when standardized dynamic tool discovery is valuable.
 - Use **Client function** only when the action must run in client code; the server-side session waits for the client response.
 - Choose **synchronous** execution for low-latency calls that must complete before the next agent response; choose **asynchronous** when the conversation should continue while a slower call is pending.
@@ -118,12 +120,12 @@ When asked to audit an application or exported configuration, review in this ord
 1. Product/version assumptions and launch-stage dependencies.
 2. Agent hierarchy and responsibility boundaries.
 3. Instructions and duplicated/conflicting policy.
-4. Tool ownership, schemas, descriptions, execution type, and authentication.
+4. Tool ownership, schemas, descriptions, execution type, authentication, and required network path/reachability.
 5. Variables and authoritative-state boundaries.
 6. Callbacks and deterministic controls.
 7. Handoffs and agent-as-a-tool usage.
 8. Knowledge sources and grounding boundaries.
-9. Guardrails, logging, redaction, and data exposure.
+9. Guardrails, logging, redaction, networking/perimeter controls, regionalization, and data exposure.
 10. Evaluations and failure-path coverage.
 11. Versioning, environment separation, deployment, and rollback.
 
@@ -148,6 +150,7 @@ Do not invent:
 - supported authentication methods;
 - model IDs or availability;
 - quotas, regions, pricing, timeouts, or launch stage;
+- network reachability or private-connectivity support for a tool/runtime;
 - Web Widget security behavior;
 - whether a Dialogflow CX, Agent Assist, or CX Insights capability exists inside CX Agent Studio.
 
