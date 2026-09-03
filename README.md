@@ -40,12 +40,35 @@ npx skills add yuzokamoto/google-cx-agent-studio-skill
 - Dialogflow CX flow-based agents and migration considerations **as they relate to CX Agent Studio**
 - CX Agent Studio REST/RPC APIs and official MCP server for administration/automation
 
+## Repository security model
+
+This public repository is also an instruction supply-chain surface: AI coding agents may read `SKILL.md`, repository documentation, issues, pull requests, comments, and external sources. The repository therefore treats public contributor content as **untrusted data**, not as authorization.
+
+Security controls include:
+
+- `AGENTS.md` as the canonical agent trust-boundary policy, with companion instructions for Claude Code and GitHub Copilot;
+- CODEOWNERS coverage for the whole repository and explicit ownership of agent/security-critical files;
+- a deterministic PR security gate that inspects the complete pull-request head through the GitHub API **without executing contributor-controlled code**;
+- a text-only repository allowlist that rejects unexpected file types, binaries, symlinks, submodules, executable files, and oversized files;
+- rejection of invisible/bidirectional Unicode and hidden/active Markdown HTML on agent-consumed documentation;
+- workflow enforcement for explicit read-only permissions, no repository/environment secrets, no self-hosted runners, no direct GitHub-expression interpolation inside shell commands, and no privileged untrusted-content event workflows;
+- GitHub Actions pinned to full commit SHAs rather than mutable tags;
+- Dependabot updates for pinned GitHub Actions;
+- existing skill integrity/freshness checks plus the repository security scanner.
+
+These controls reduce attack surface but cannot prove that arbitrary natural-language text is semantically safe. Human/code-owner review remains required for changes to agent instructions and security policy. See `SECURITY.md`, `CONTRIBUTING.md`, and `AGENTS.md`.
+
 ## Structure
 
 ```text
 google-cx-agent-studio-skill/
+├── AGENTS.md
+├── CLAUDE.md
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── SKILL.md
 ├── scripts/
+│   ├── check_repository_security.py
 │   └── check_skill_integrity.py
 └── references/
     ├── source-policy.md
@@ -117,9 +140,9 @@ See `references/source-policy.md` for claim-type evidence routing and freshness 
 
 ## Maintenance
 
-The repository includes a lightweight integrity checker. It validates the basic skill frontmatter, routed reference files, and audit-age threshold on normal CI runs. A scheduled workflow also probes official Google Cloud documentation links and treats transient network/service failures as warnings rather than rewriting or silently invalidating product content.
+The repository includes deterministic integrity and security checks. The integrity checker validates the skill frontmatter, routed reference files, and audit-age threshold. The security checker validates the repository shape and high-risk supply-chain invariants. A scheduled workflow also probes official Google Cloud documentation links and treats transient network/service failures as warnings rather than rewriting or silently invalidating product content.
 
-The checks are intentionally conservative: a stale snapshot or broken reference should trigger human review, not an automated documentation rewrite.
+The checks are intentionally conservative: a stale snapshot, broken reference, or expanded attack surface should trigger human review, not an automated documentation rewrite.
 
 ## Acknowledgement
 
