@@ -1,6 +1,6 @@
 # Versioning, Export/Import, Git, and Deployment
 
-Use this reference for immutable versions, rollback, source-control workflows, environment promotion, Web Widget/API deployment, and traffic splitting.
+Use this reference for immutable versions, rollback, source-control workflows, environment promotion, deployment-channel selection, Web Widget/API/platform deployment, and traffic splitting.
 
 ## Versions
 
@@ -132,13 +132,133 @@ Deploy immutable versions rather than relying on an unreviewed draft state.
 Before deployment verify:
 
 - target project/location;
-- correct version;
+- correct application version;
+- intended channel type;
 - environment endpoints/authentication;
 - evaluations passed;
 - real integration smoke tests passed;
 - logging/redaction/retention settings reviewed;
 - channel authentication configured;
 - rollback version identified.
+
+## Deployment channel selection
+
+Do not treat Web Widget as the universal deployment path. Choose the channel from the client/contact-center requirements.
+
+Current CX Agent Studio documentation groups deployment into three broad paths:
+
+1. **Web Widget** — a ready-to-use browser/mobile web component for chat, voice, or supported mixed experiences.
+2. **Platform connections** — integrations with supported telephony/contact-center platforms.
+3. **API access** — direct session integration for a custom client or backend-controlled channel.
+
+At the 2026-09-03 audit, the deployment overview lists platform connections for AudioCodes, Five9, Google Cloud CCaaS, Google Telephony Platform, and Twilio. Treat the vendor list and channel-specific capabilities as time-sensitive and re-check the deployment overview before architecture or procurement decisions.
+
+Reference:
+https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/deploy
+
+### Requirement-based selection
+
+| Requirement | Default path to evaluate |
+|---|---|
+| Fast browser-hosted chat/voice UX with Google's ready-made component | Web Widget |
+| Fully custom UI, mobile app, backend-controlled session lifecycle, or custom channel adapter | API access |
+| Existing supported contact-center/telephony vendor | Platform connection |
+| Existing channel not covered by a supported platform connection | API access or a supported adapter architecture |
+| Need rich Web Widget interaction components | Web Widget, subject to current widget/language limitations |
+| Need channel-specific voice/telephony controls | Relevant platform connection, then verify that platform's current settings/limitations |
+
+Channel choice should consider:
+
+- end-user identity/authentication model;
+- session ownership and resume/reconnect behavior;
+- voice/chat/video modality requirements;
+- latency and streaming requirements;
+- rich-content/UI requirements;
+- DTMF/barge-in/telephony requirements where applicable;
+- browser versus server-side trust boundary;
+- network path and corporate firewall restrictions;
+- logging/redaction/data-retention requirements;
+- vendor/contact-center operational ownership.
+
+## API access
+
+Use API access when the client experience or session lifecycle should be controlled outside the ready-made widget/platform connector.
+
+Current API-access documentation uses a deployment plus a caller-supplied session ID with `runSession`; production systems should use the currently documented service-account/workload authentication pattern rather than development-user credentials.
+
+Use the API when you need, for example:
+
+- a custom web/mobile UI;
+- an application-owned session adapter;
+- a backend that mediates end-user access;
+- integration with a channel not directly supported as a platform connection;
+- custom handling of CX Agent Studio response parts/events.
+
+Do not assume an API deployment removes channel responsibilities. The client/adapter still owns appropriate authentication, reconnect/session ID behavior, rendering, accessibility, error handling, and security.
+
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/deploy/api-access
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/authentication
+
+## Platform connections
+
+Use a platform connection when the existing telephony/contact-center stack matches a currently supported CX Agent Studio integration and the documented connector satisfies the required channel behavior.
+
+Do not generalize one vendor's setup to another. Platform integrations can differ in:
+
+- supported modality;
+- provisioning/phone-number behavior;
+- required vendor-side configuration;
+- region/number limitations;
+- channel-specific behavior settings;
+- adapter ownership and deployment model.
+
+For example, current documentation describes Twilio through a deployable open-source telephony adapter supporting voice, SMS, and RCS, while Google Telephony Platform has its own number-provisioning and regional constraints. Those details are channel-specific, not generic CX Agent Studio guarantees.
+
+Always use the current vendor-specific deployment page for implementation.
+
+## Web Widget
+
+Use Web Widget when the ready-made web component fits the UX, authentication, and browser-security requirements.
+
+Current Web Widget documentation requires requests to Google's backend to be authenticated with short-lived credentials. Supported patterns documented at audit time include Google-hosted/self-hosted token brokers, OAuth2, and a custom authentication API.
+
+Current documented limitation: **rich content responses presently support English only**. Do not base a non-English production UX on rich content without re-checking whether that limitation has changed.
+
+The widget runs as a custom element using Shadow DOM rather than a strict isolated iframe by default. Review same-origin storage and XSS implications in `security-and-guardrails.md`.
+
+Before production:
+
+- choose/authenticate the intended user/service identity model;
+- configure IAM least privilege;
+- review origin/reCAPTCHA protections where applicable;
+- sanitize any custom rich content;
+- test browser/network restrictions in the real client environment;
+- validate session/logout/token-refresh behavior;
+- test the exact configured modality (chat, voice, mixed/video where currently supported);
+- verify current language/rich-content limitations.
+
+Reference:
+https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/deploy/web-widget
+
+## Channel-specific testing
+
+A successful Simulator or text-only evaluation does not prove production channel behavior.
+
+Before promoting a channel, test the applicable dimensions:
+
+- authentication/token refresh;
+- session creation/reconnection;
+- text streaming/rendering;
+- voice latency and interruption/barge-in;
+- telephony routing and DTMF where used;
+- rich-content rendering and sanitization;
+- network/firewall/browser constraints;
+- escalation/end-session metadata consumed by the channel;
+- vendor-specific failure/retry behavior;
+- logging/redaction behavior for the actual modality.
+
+Keep channel tests separate from core agent-orchestration evaluations when the failure layer is outside the model/agent behavior.
 
 ## Traffic splitting
 
@@ -159,24 +279,6 @@ Do not split traffic across versions that change an external contract incompatib
 Reference:
 https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/deploy/traffic-split
 
-## Web Widget
-
-Current Web Widget documentation requires authenticated requests to Google's backend using short-lived credentials. Supported patterns documented at audit time include Google-hosted/self-hosted token brokers, OAuth2, and a custom authentication API.
-
-Do not paste an unauthenticated development embed into production and assume the snippet is sufficient.
-
-Before production:
-
-- choose/authenticate the intended user/service identity model;
-- configure IAM least privilege;
-- review origin/reCAPTCHA protections where applicable;
-- sanitize any custom rich content;
-- test browser/network restrictions in the real client environment;
-- validate session/logout/token-refresh behavior.
-
-Reference:
-https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/deploy/web-widget
-
 ## Rollback strategy
 
 A release plan should specify:
@@ -186,6 +288,7 @@ A release plan should specify:
 3. health/evaluation/business signals;
 4. threshold for rollback;
 5. known-good version;
-6. external-contract compatibility.
+6. external-contract compatibility;
+7. channel/vendor configuration that is outside the application version and may need separate recovery.
 
-A platform version rollback cannot undo an external side effect already committed by a backend. Sensitive operations still require backend idempotency and compensating/business procedures.
+A platform version rollback cannot undo an external side effect already committed by a backend or necessarily revert external channel/vendor configuration. Sensitive operations still require backend idempotency and compensating/business procedures.
