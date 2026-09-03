@@ -72,6 +72,7 @@ Do not invent a confirmation ceremony when the user's write intent and target en
 - **Architecture / multi-agent / routing** → read `references/agents-and-handoffs.md`.
 - **Instructions / prompt structure / references** → read `references/instructions.md`.
 - **Tool choice / OpenAPI / Python / MCP / connectors / async** → read `references/tools.md`.
+- **Executable Python tools or callbacks / runtime globals / callback signatures** → read `references/python-runtime.md` plus the relevant tool/state reference.
 - **FAQ / documents / RAG / website knowledge / Google Search** → read `references/knowledge-grounding.md`.
 - **Variables / callbacks / deterministic behavior / state** → read `references/state-callbacks-determinism.md`.
 - **Fallback / retries / system errors / tool failures / escalation-error behavior** → read `references/error-handling.md`.
@@ -123,6 +124,7 @@ Do not move authoritative state into conversation history merely because the mod
 - Select tools only after checking **capability fit, network reachability, authentication, latency/execution mode, model data exposure, and governance ownership**.
 - Use **OpenAPI** for a clean external HTTP API contract; current console documentation limits each OpenAPI tool to one operation/function.
 - Use **Python** to adapt/filter large API payloads, perform deterministic local logic, or chain supported tools when that materially reduces model calls/context **and the runtime can reach every required dependency**.
+- Before returning executable Python tool/callback code, read `references/python-runtime.md` and verify current runtime imports, globals, callback signatures, and networking constraints.
 - Current networking documentation supports private network access for OpenAPI and MCP through the documented Service Directory path, but not for Python code tools or Python callbacks. Re-check before relying on this because connectivity support is time-sensitive.
 - Use **MCP** when integrating an existing Streamable HTTP MCP server or when standardized dynamic tool discovery is valuable.
 - Use **Client function** only when the action must run in client code; the server-side session waits for the client response.
@@ -177,6 +179,7 @@ Do not invent:
 - model IDs or availability;
 - quotas, regions, pricing, timeouts, or launch stage;
 - network reachability or private-connectivity support for a tool/runtime;
+- Python runtime APIs/import availability from generic ADK or normal CPython examples;
 - Web Widget security behavior;
 - whether a Dialogflow CX, Agent Assist, or CX Insights capability exists inside CX Agent Studio.
 
