@@ -26,10 +26,10 @@ Properties:
 - referenced in instructions as `{{variable_name}}`;
 - compiled directly into the prompt as text substitution;
 - intended for values that change infrequently;
-- useful for configuration, stable business rules, or large context that is constant within a conversation;
+- useful for configuration, stable conversational policy, or large context that is constant within a conversation;
 - changing their value invalidates prompt caching and can affect latency.
 
-Do not put secrets into prompts merely because static variables exist.
+Do not put secrets into prompts merely because static variables exist. Do not treat prompt visibility as deterministic enforcement of an authoritative business rule.
 
 ## Dynamic variables
 
@@ -146,20 +146,28 @@ Examples:
 - store an opaque journey/correlation identifier;
 - normalize tool failures.
 
-## Determinism hierarchy
+## Responsibility-based deterministic control
 
-For requirements that must not depend on model judgment, prefer:
+Do not treat backend services, tools, callbacks, Handoff Rules, instructions, and model inference as a universal precedence ladder. They own different parts of the system.
 
-```text
-Authoritative backend
-    > tool implementation
-    > callback
-    > Handoff Rule
-    > instruction
-    > free model inference
-```
+Use the control surface that matches the responsibility:
 
-This is an engineering preference, not a claim that every higher layer can replace every lower layer. Choose the layer that actually owns the responsibility.
+| Requirement | Default owner / control surface |
+|---|---|
+| Authorization, regulated decisions, durable/irreversible state, idempotency | Authoritative backend/service |
+| Deterministic integration logic after a capability is invoked | Tool implementation |
+| Lifecycle interception, validation, normalization, response filtering | Callback |
+| Guaranteed parent/child transfer condition | Handoff Rule |
+| Conversational policy and flexible orchestration | Agent instruction |
+| Semantic interpretation where ambiguity is acceptable | Model inference |
+
+Google's best-practices documentation notes that callbacks are usually the best option for full deterministic control because they execute outside the agent's purview. That does **not** mean callbacks supersede every specialized deterministic platform mechanism. For example, Handoff Rules are specifically designed to deterministically force or block parent/child transfers.
+
+Likewise, tool internals can be fully deterministic while agent-orchestrated tool selection, argument prediction, and result interpretation remain probabilistic.
+
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/best-practices
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/handoff
 
 ## Validation pattern
 
