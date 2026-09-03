@@ -40,7 +40,7 @@ For Python tools, it is a `ToolContext`. `ToolContext` derives from `CallbackCon
 
 Useful current context data includes:
 
-- `user_content` — most recent user input;
+- `user_content` — most recent user content;
 - `invocation_id` — current invocation/turn identifier;
 - `agent_name` — current agent display name;
 - `session_id` — current session identifier;
@@ -140,12 +140,13 @@ The runtime currently exposes `StatusError` for errors carrying an HTTP-style st
 try:
     response.raise_for_status()
 except StatusError as exc:
-    # Handle only what this local capability can own.
     return {
-        "status": "TEMPORARILY_UNAVAILABLE",
-        "retryable": exc.status_code >= 500,
+        "status": "UPSTREAM_ERROR",
+        "status_code": exc.status_code,
     }
 ```
+
+Do **not** infer retryability solely from an HTTP status code in generic skill-generated code. Whether a failure is retryable depends on the upstream contract, operation idempotency, rate-limit semantics, and the owning system's retry policy. Map only the error distinctions the capability is authorized to own, and avoid exposing internal diagnostics to the model/user unnecessarily.
 
 Avoid broad `except:` blocks in production examples unless the goal is deliberately to collapse every runtime exception to one safe outcome. Preserve distinctions needed for observability while returning only customer/model-safe data.
 
