@@ -1,0 +1,11 @@
+# Every change requires maintainer ownership review when CODEOWNERS review is enforced.
+* @yuzokamoto
+
+# Security- and agent-critical surfaces are listed explicitly for clarity.
+/.github/ @yuzokamoto
+/SKILL.md @yuzokamoto
+/AGENTS.md @yuzokamoto
+/CLAUDE.md @yuzokamoto
+/SECURITY.md @yuzokamoto
+/scripts/ @yuzokamoto
+/references/ @yuzokamoto
