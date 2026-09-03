@@ -2,17 +2,41 @@
 name: google-cx-agent-studio
 description: >
   Specialized engineering skill for Google Cloud Customer Experience Agent Studio (CX Agent Studio).
-  Use for designing, building, reviewing, debugging, securing, evaluating, versioning, exporting,
-  importing, automating, and deploying CX Agent Studio applications; agent/sub-agent architecture;
-  instructions; tools and toolsets; variables; callbacks; deterministic handoffs; knowledge grounding;
-  guardrails; Simulator traces; evaluations; Dialogflow CX flow integration; REST API and the official
-  CX Agent Studio MCP server. Verify current Google Cloud documentation for product behavior that may
-  have changed.
+  Use when CX Agent Studio is the primary subject or an explicit integration/migration target: designing,
+  building, reviewing, debugging, securing, evaluating, versioning, exporting, importing, automating,
+  or deploying CX Agent Studio applications; agent/sub-agent architecture; instructions; tools/toolsets;
+  variables; callbacks; deterministic handoffs; knowledge grounding; guardrails; Simulator traces;
+  evaluations; CX Agent Studio integration with Dialogflow CX flows, channels, REST/RPC APIs, or the
+  official CX Agent Studio MCP server. Do not use for standalone Dialogflow CX, generic MCP, generic
+  Google Cloud security/IAM/networking, Agent Assist, or CX Insights work when CX Agent Studio is not
+  materially involved. Verify current Google Cloud documentation for time-sensitive product behavior.
 ---
 
 # Google CX Agent Studio
 
 Act as a CX Agent Studio application engineer and reviewer. Optimize for correctness, deterministic control where required, minimal model context, testability, security, and maintainability.
+
+## Scope and activation boundary
+
+Use this skill when **CX Agent Studio is materially involved in the task**, including:
+
+- designing, implementing, reviewing, debugging, or operating a CX Agent Studio application;
+- choosing or configuring CX Agent Studio agents, tools, variables, callbacks, handoffs, knowledge, guardrails, evaluations, versions, or deployments;
+- integrating CX Agent Studio with external APIs, MCP servers, channels, contact-center platforms, or knowledge systems;
+- integrating or migrating existing Dialogflow CX flows **into or with CX Agent Studio**;
+- automating CX Agent Studio resources through its REST/RPC interfaces or official MCP server;
+- reviewing the boundary between CX Agent Studio and Agent Assist/CX Insights when that boundary is the question.
+
+### Do not use this skill solely for
+
+- standalone Dialogflow CX flow/page/intent design with no CX Agent Studio integration;
+- generic MCP server/client implementation unrelated to CX Agent Studio;
+- generic Google Cloud IAM, VPC, networking, Secret Manager, Cloud Run, or security design where CX Agent Studio imposes no material requirement;
+- standalone Agent Assist implementation;
+- standalone CX Insights implementation;
+- general conversational-AI design when the user has not selected or asked about CX Agent Studio.
+
+When an adjacent product is relevant only because CX Agent Studio integrates with it, keep this skill focused on the **CX Agent Studio side of the boundary** and defer product-specific implementation details to the appropriate source/skill.
 
 ## Operating rules
 
@@ -108,7 +132,7 @@ Do not move authoritative state into conversation history merely because the mod
 ## Knowledge defaults
 
 - **File Search**: simple RAG over uploaded files or an existing RAG knowledge base.
-- **Data Store**: governed retrieval over website/content data stores and Vertex AI Search-backed sources.
+- **Data Store**: retrieval over Vertex AI Search-backed Data Stores/Engines when its documented source types and controls match the requirement.
 - **Google Search**: current public-web grounding when appropriate.
 - **Backend tool**: authoritative transactional/customer-specific facts.
 
