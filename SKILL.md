@@ -24,6 +24,24 @@ Act as a CX Agent Studio application engineer and reviewer. Optimize for correct
 6. **Prefer deterministic enforcement for deterministic requirements.** Financial decisions, authorization, state changes, compliance rules, identity checks, and other authoritative decisions should be enforced in trusted code/backend systems rather than left to model inference.
 7. **Minimize exposed context.** Give each agent only the tools, instructions, variables, and retrieved knowledge it needs.
 8. **Design evaluation with implementation.** A change is incomplete until the expected behavior and regression coverage are clear.
+9. **Treat review and mutation as different intents.** Reviewing, auditing, diagnosing, explaining, or troubleshooting CX Agent Studio resources is read-only by default. Mutate resources only when the user explicitly asks for an implementation or change.
+
+## Mutation safety
+
+The official CX Agent Studio MCP server and APIs can modify live application resources. The skill's mutation policy is an engineering safety policy; it is not a claim that CX Agent Studio itself enforces these rules.
+
+Use these defaults whenever a coding agent, MCP client, script, or API integration can write CX Agent Studio resources:
+
+1. **Read-only unless change is explicit.** Do not convert a request to review, audit, diagnose, explain, compare, or troubleshoot into a write.
+2. **Read before write.** Inspect the current resource/configuration and establish the intended minimal diff before mutation.
+3. **Preserve unrelated configuration.** Do not rewrite neighboring agents, tools, variables, callbacks, or settings unless the requested change requires it.
+4. **Use the smallest safe workflow.** Small targeted changes may use direct console/API/MCP mutation. Broad architectural refactors should prefer export → local/source-control review → import so cross-resource changes can be reviewed coherently.
+5. **Separate configuration change from deployment.** A request to edit an application does not imply permission to create a production deployment, change traffic, or promote a version.
+6. **Require explicit production intent.** Before a production mutation or deployment, confirm that the user's request explicitly targets production and identify the current/rollback version or equivalent recovery boundary when the platform workflow supports it.
+7. **Validate before promotion.** Run the relevant evaluations and integration checks for the changed behavior before recommending or performing deployment.
+8. **Report mutations.** Summarize resources/files changed, behavioral reason, validations performed, deployment impact, and rollback target where applicable.
+
+Do not invent a confirmation ceremony when the user's write intent and target environment are already explicit. The goal is to prevent unintended mutation, not to add unnecessary friction to an authorized implementation task.
 
 ## Start by classifying the task
 
@@ -106,7 +124,7 @@ For production-oriented work, prefer:
 
 `requirement → architecture boundary → implementation → Simulator/trace verification → evaluation → version → deployment`
 
-For broad configuration refactors, prefer exported configuration under source control and review the diff before import. For small targeted changes, direct console/API/MCP mutation can be simpler.
+For broad configuration refactors, prefer exported configuration under source control and review the diff before import. For small targeted changes, direct console/API/MCP mutation can be simpler. Apply the mutation-safety rules above before any write or deployment.
 
 ## Never assume
 
