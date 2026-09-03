@@ -28,7 +28,7 @@ Create a sub-agent when at least one of these is true:
 - the agent needs a distinct tool surface or security boundary;
 - the instructions are becoming large because unrelated behaviors are mixed;
 - ownership of the conversation should clearly move to another specialist;
-- the capability deserves independent evaluation and lifecycle management.
+- the capability benefits from distinct ownership, maintenance boundaries, and evaluation coverage within the application.
 
 Do **not** create a sub-agent merely because:
 
@@ -38,6 +38,16 @@ Do **not** create a sub-agent merely because:
 - you want a one-to-one mapping between flowchart boxes and agents.
 
 Excessive decomposition increases routing ambiguity, context transfer risk, evaluation surface, and maintenance cost.
+
+### Lifecycle boundary
+
+Do not describe sub-agents as independently deployable/versioned units unless current platform documentation explicitly introduces such a mechanism.
+
+Current CX Agent Studio versions are immutable snapshots of the **agent application**, and deployments reference application versions. Sub-agents can have distinct responsibility, tools, instructions, callbacks, ownership, and evaluation coverage, but those differences live inside the application lifecycle boundary.
+
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/version
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/rest/v1/projects.locations.apps
 
 ## Root-agent default
 
@@ -81,7 +91,7 @@ https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/handoff
 
 ## Agent-as-a-Tool versus handoff
 
-Agent-as-a-tool lets one agent reuse another agent's capability without transferring conversational ownership. It can execute synchronously or asynchronously. As of the 2026-09-03 audit, this feature is documented as Preview.
+Agent-as-a-tool lets one agent reuse another agent's capability without transferring conversational ownership. It can execute synchronously or asynchronously. As of the 2026-09-03 audit, this feature is documented as Preview; re-check launch stage before production commitments.
 
 Choose based on ownership:
 
@@ -94,8 +104,35 @@ Choose based on ownership:
 
 Do not use agent-as-a-tool just to hide poor tool design. If the reused capability is deterministic API logic, a regular tool may be simpler and cheaper.
 
-Official reference:
+### Current operational constraints
+
+Current official documentation establishes these material constraints:
+
+- an agent can call multiple **different** agent-as-a-tools in parallel;
+- the **same** agent-as-a-tool cannot be executed in parallel with itself;
+- an agent-as-a-tool cannot be assigned to the tool's root agent;
+- asynchronous execution is currently the default configuration and allows the active agent session to continue while the agent-tool works;
+- synchronous execution blocks on the tool result before the active agent proceeds;
+- asynchronous instructions should handle the pending state and avoid duplicate calls while a result is outstanding.
+
+Reference:
 https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/agent-as-tool
+
+### Sessions, tracing, and debugging
+
+Current v1/v1beta schemas identify conversations sourced from an agent tool as `AGENT_TOOL` and document that an agent tool runs its target agent in a **separate session**, persisted for testing and debugging purposes.
+
+Implications:
+
+- expect agent-tool work to appear as its own persisted session/conversation evidence when debugging;
+- do not assume that every detail of the active conversation's session state is implicitly shared with the agent-tool session;
+- define and verify the inputs/context the agent-tool actually receives;
+- verify outputs/state propagation from runtime traces before building logic that depends on undocumented cross-session behavior;
+- when an async agent-tool asks follow-up questions, the active agent may need to relay information back according to the documented interaction pattern.
+
+References:
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/rpc/google.cloud.ces.v1
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/tool/agent-as-tool
 
 ## Routing checklist
 
@@ -110,6 +147,8 @@ Before adding an agent, answer:
 7. When does it return control?
 8. What happens on failure or unsupported requests?
 9. How will this routing be evaluated?
+10. Does this boundary require conversation ownership transfer, or only capability reuse?
+11. If using agent-as-a-tool, what context/state is explicitly available across the separate session boundary?
 
 If these cannot be answered, the agent boundary may be premature.
 
@@ -154,3 +193,12 @@ Every routing boundary should have tests for:
 - missing prerequisite state;
 - return/backward handoff where applicable;
 - prompt injection attempting to bypass routing prerequisites.
+
+For agent-as-a-tool, also test:
+
+- sync/async behavior used by the design;
+- duplicate invocation while pending;
+- parallel calls when multiple different agent-tools are involved;
+- expected input/context made available to the separate agent-tool session;
+- expected output returned to the active agent;
+- follow-up-question relay when applicable.
