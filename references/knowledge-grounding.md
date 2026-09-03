@@ -19,9 +19,9 @@ A retrieval system can ground answers in content; it should not be treated as th
 | Current public-web information | Google Search |
 | Customer-specific state, balances, eligibility, order state, approvals | Backend/OpenAPI/Python/MCP tool backed by authoritative system |
 | Stable conversational/presentation policy that does not itself enforce an authoritative invariant | Static variable/global instruction |
-| Business rule, authorization, compliance requirement, or state invariant that must hold regardless of model behavior | Authoritative backend/service or another deterministic enforcement layer that owns the rule |
+| Business rule, authorization, compliance requirement, or state invariant that must hold regardless of model behavior | Authoritative backend/service that owns and enforces the rule |
 
-Static variables and global instructions can make stable policy visible to the model. They do not turn prompt content into authoritative enforcement.
+Static variables and global instructions can make stable policy visible to the model. They do not turn prompt content into authoritative enforcement. Callbacks and Handoff Rules may enforce conversational or routing prerequisites, but they should not replace the authoritative service that owns a business invariant.
 
 ## File Search
 
