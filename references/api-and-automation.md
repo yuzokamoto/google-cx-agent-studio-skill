@@ -24,6 +24,53 @@ Before automating writes, verify:
 - target API version;
 - current ETag/concurrency semantics where exposed.
 
+## Mutation authorization policy
+
+CX Agent Studio's APIs and official MCP server can change application resources. Access to a write-capable interface is not, by itself, intent to modify resources.
+
+Use the following skill-level safety boundary:
+
+### Read-only intents
+
+Treat these tasks as read-only unless the user explicitly asks for a change:
+
+- review or audit;
+- architecture analysis;
+- troubleshooting or diagnosis;
+- comparison;
+- explanation/documentation lookup;
+- inspection of an exported app, trace, evaluation, or current configuration.
+
+Do not "fix while reviewing" merely because a correction appears obvious.
+
+### Write intents
+
+A write is appropriate when the user explicitly asks to create, update, delete, import, restore, configure, or otherwise implement a change.
+
+For authorized writes:
+
+1. read the current target first;
+2. identify the smallest intended diff;
+3. preserve unrelated fields/resources;
+4. verify environment and target identifiers;
+5. use supported concurrency controls when available;
+6. validate the resulting behavior;
+7. report what changed.
+
+Do not add extra confirmation when the write intent and non-production target are already explicit and unambiguous.
+
+### Production and deployment boundary
+
+Treat configuration mutation and deployment as separate permissions in the user's request.
+
+- Editing an application does not imply permission to deploy it.
+- Creating a version does not imply permission to change production traffic.
+- A request to deploy to production should be explicit or otherwise unambiguously part of the requested operation.
+- Before a production mutation/deployment, identify the affected version/state and a recovery/rollback boundary when the platform workflow supports one.
+- Do not silently promote a draft or newly changed resource because tests pass.
+
+This policy is an engineering safeguard for agents using the APIs/MCP server; it is not a claim that CX Agent Studio itself imposes these intent checks.
+
 ## Direct mutation versus export/edit/import
 
 Current Google guidance for the official MCP server distinguishes two useful patterns.
@@ -85,16 +132,16 @@ Do not hard-code a tool list from this skill. Discover the current MCP server ca
 
 ## Automation safety
 
-For any write automation:
+For any authorized write automation:
 
 1. read the current resource first;
 2. understand the intended minimal diff;
 3. preserve unrelated configuration;
 4. use ETags/concurrency control when supported;
-5. write to a non-production branch/environment first for broad changes;
-6. run evaluations;
-7. create a version;
-8. deploy only the reviewed version.
+5. prefer a non-production environment first for broad or risky changes unless the user explicitly targets production;
+6. run relevant evaluations;
+7. create a version or recovery boundary when appropriate;
+8. deploy only when deployment is part of the authorized task and the reviewed version is identified.
 
 Never mass-update generated configuration from guessed object names.
 
