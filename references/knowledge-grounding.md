@@ -18,7 +18,10 @@ A retrieval system can ground answers in content; it should not be treated as th
 | Specific websites managed/indexed through a website data store | Website/Data Store tool |
 | Current public-web information | Google Search |
 | Customer-specific state, balances, eligibility, order state, approvals | Backend/OpenAPI/Python/MCP tool backed by authoritative system |
-| Fixed business rule that must always apply and changes rarely | Static variable/global instruction or backend policy, depending authority/sensitivity |
+| Stable conversational/presentation policy that does not itself enforce an authoritative invariant | Static variable/global instruction |
+| Business rule, authorization, compliance requirement, or state invariant that must hold regardless of model behavior | Authoritative backend/service that owns and enforces the rule |
+
+Static variables and global instructions can make stable policy visible to the model. They do not turn prompt content into authoritative enforcement. Callbacks and Handoff Rules may enforce conversational or routing prerequisites, but they should not replace the authoritative service that owns a business invariant.
 
 ## File Search
 
@@ -86,6 +89,8 @@ However, determine whether the answer must be **exactly fixed** or merely ground
 - if wording/content must be exact and stable, use a deterministic response path or controlled backend/static configuration;
 - if semantic retrieval and summarization are acceptable, use File Search/Data Store;
 - if the information changes frequently and is public, consider an approved website data store or Google Search depending governance needs.
+
+Do not confuse an exact customer-facing response with enforcement of an authoritative business rule. A fixed response may be generated deterministically while the underlying authorization, eligibility, or state invariant still belongs in an authoritative service.
 
 ## Separate public knowledge from transactional truth
 
