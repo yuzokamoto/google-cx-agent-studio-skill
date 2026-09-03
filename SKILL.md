@@ -50,6 +50,7 @@ Do not invent a confirmation ceremony when the user's write intent and target en
 - **Tool choice / OpenAPI / Python / MCP / connectors / async** → read `references/tools.md`.
 - **FAQ / documents / RAG / website knowledge / Google Search** → read `references/knowledge-grounding.md`.
 - **Variables / callbacks / deterministic behavior / state** → read `references/state-callbacks-determinism.md`.
+- **Fallback / retries / system errors / tool failures / escalation-error behavior** → read `references/error-handling.md`.
 - **Guardrails / PII / authentication / security design** → read `references/security-and-guardrails.md`.
 - **Testing / Simulator / traces / evaluations / regressions** → read `references/evaluations-debugging.md`.
 - **Versions / Git / export-import / deployment / traffic split / Web Widget** → read `references/versioning-deployment.md`.
@@ -126,8 +127,9 @@ When asked to audit an application or exported configuration, review in this ord
 7. Handoffs and agent-as-a-tool usage.
 8. Knowledge sources and grounding boundaries.
 9. Guardrails, logging, redaction, networking/perimeter controls, regionalization, and data exposure.
-10. Evaluations and failure-path coverage.
-11. Versioning, environment separation, deployment, and rollback.
+10. Fallback/error ownership, retry behavior, and escalation/end-session paths.
+11. Evaluations and failure-path coverage.
+12. Versioning, environment separation, deployment, and rollback.
 
 Classify findings as `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, or `RECOMMENDATION`, and explain evidence plus the smallest safe correction.
 
