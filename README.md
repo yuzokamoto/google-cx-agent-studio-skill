@@ -29,6 +29,7 @@ npx skills add yuzokamoto/google-cx-agent-studio-skill
 - Root agents, sub-agents, descriptions, routing, and deterministic handoff rules
 - Agent instructions, XML restructuring, tool/agent/variable references, and language guidance
 - OpenAPI, Python, MCP, Client Function, Data Store, File Search, Google Search, connectors, system/widget tools, and agent-as-a-tool
+- CX Agent Studio Python runtime details for executable Python tools/callbacks, including runtime globals, supported imports, callback signatures, tool-to-tool calls, and networking limits
 - Synchronous versus asynchronous tool execution
 - Static and dynamic variables, session context injection, callbacks, and deterministic control
 - Fallback behavior, retries, tool/integration failures, business-negative outcomes, and escalation/end-session boundaries
@@ -51,6 +52,7 @@ google-cx-agent-studio-skill/
     ├── agents-and-handoffs.md
     ├── instructions.md
     ├── tools.md
+    ├── python-runtime.md
     ├── knowledge-grounding.md
     ├── state-callbacks-determinism.md
     ├── error-handling.md
@@ -108,6 +110,7 @@ Primary documentation:
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/resources/release-notes
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/best-practices
+- https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/python
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/export
 
 See `references/source-policy.md` for claim-type evidence routing and freshness rules.
