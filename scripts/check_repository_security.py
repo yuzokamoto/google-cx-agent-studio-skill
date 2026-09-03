@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Deterministic security policy for this public agent-skill repository.
 
-PR mode must run from the trusted base branch. It fetches the PR head through the
+PR mode runs from the trusted base branch. It fetches the PR head through the
 GitHub API and scans it as inert data; it never checks out or executes PR code.
+
+This repository intentionally uses a narrow policy. Expanding file types,
+workflows, Actions, shell commands, or external content sources requires a
+maintainer-reviewed policy change rather than silent acceptance.
 """
 
 from __future__ import annotations
@@ -54,18 +58,27 @@ ROOT_FILES = {
     ".gitattributes",
 }
 
+ALLOWED_WORKFLOWS = {
+    ".github/workflows/skill-integrity.yml",
+    ".github/workflows/pr-security.yml",
+}
+
+EXPECTED_EVENTS = {
+    ".github/workflows/skill-integrity.yml": {"push", "schedule", "workflow_dispatch"},
+    ".github/workflows/pr-security.yml": {"pull_request_target"},
+}
+
+ALLOWED_ACTIONS = {"actions/checkout"}
+
+ALLOWED_RUN_COMMANDS = {
+    "python3 scripts/check_repository_security.py --max-audit-age-days 120",
+    "python3 scripts/check_skill_integrity.py --max-audit-age-days 120",
+    "python3 scripts/check_skill_integrity.py --max-audit-age-days 120 --check-links",
+    'python3 scripts/check_repository_security.py --pr-number "$PR_NUMBER" --repository "$GITHUB_REPOSITORY" --max-audit-age-days 120',
+}
+
 OWNER_ONLY_PREFIXES = (".github/", "scripts/")
 OWNER_ONLY_FILES = {"AGENTS.md", "CLAUDE.md", "SECURITY.md", "CONTRIBUTING.md"}
-
-FORBIDDEN_EVENT_TOKENS = (
-    "issue_comment",
-    "issues",
-    "pull_request_review_comment",
-    "discussion",
-    "discussion_comment",
-    "repository_dispatch",
-    "workflow_run",
-)
 
 INVISIBLE_OR_BIDI = {
     "\u200b", "\u200c", "\u200d",
@@ -82,6 +95,7 @@ ALLOWED_MARKDOWN_HOSTS = {
     "example.com",
 }
 
+PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 URL_RE = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
 ACTION_USE_RE = re.compile(r"(?m)^\s*-?\s*uses:\s*([^\s#]+)")
 FULL_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
@@ -95,11 +109,7 @@ DANGEROUS_HTML_RE = re.compile(
 DANGEROUS_SCHEME_RE = re.compile(
     r"(?:javascript:|data:\s*text/html|file://|ftp://)", re.IGNORECASE
 )
-FORBIDDEN_SHELL_RE = re.compile(
-    r"(?:curl\b|wget\b|python3?\s+-m\s+pip\s+install\b|pip3?\s+install\b|"
-    r"npm\s+install\b|\bnpx\b|apt(?:-get)?\s+install\b|brew\s+install\b)",
-    re.IGNORECASE,
-)
+BASE64_BLOB_RE = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{256,}={0,2}(?![A-Za-z0-9+/])")
 
 Entry = tuple[str, str, int, bytes]
 
@@ -118,9 +128,8 @@ def allowed_path(path: str) -> bool:
         ".github/pull_request_template.md",
     }:
         return True
-    if path.startswith(".github/workflows/"):
-        name = path.removeprefix(".github/workflows/")
-        return "/" not in name and name.endswith((".yml", ".yaml"))
+    if path in ALLOWED_WORKFLOWS:
+        return True
     if path.startswith(".github/ISSUE_TEMPLATE/"):
         name = path.removeprefix(".github/ISSUE_TEMPLATE/")
         return "/" not in name and name.endswith((".md", ".yml", ".yaml"))
@@ -134,7 +143,7 @@ def allowed_path(path: str) -> bool:
 
 
 def valid_path(path: str) -> bool:
-    if not path or path.startswith("/") or "\\" in path:
+    if not path or path.startswith("/") or "\\" in path or not PATH_RE.fullmatch(path):
         return False
     pure = PurePosixPath(path)
     return (
@@ -144,21 +153,21 @@ def valid_path(path: str) -> bool:
 
 
 def strip_fenced_code(text: str) -> str:
-    out: list[str] = []
+    output: list[str] = []
     fence: str | None = None
     for line in text.splitlines(keepends=True):
         stripped = line.lstrip()
         if fence is None and (stripped.startswith("```") or stripped.startswith("~~~")):
             fence = stripped[:3]
-            out.append("\n")
+            output.append("\n")
             continue
         if fence is not None:
             if stripped.startswith(fence):
                 fence = None
-            out.append("\n")
+            output.append("\n")
             continue
-        out.append(line)
-    return "".join(out)
+        output.append(line)
+    return "".join(output)
 
 
 def host_allowed(host: str) -> bool:
@@ -168,12 +177,12 @@ def host_allowed(host: str) -> bool:
 
 def scan_text(path: str, text: str, errors: list[str]) -> None:
     for index, ch in enumerate(text):
-        cp = ord(ch)
+        codepoint = ord(ch)
         if ch in INVISIBLE_OR_BIDI:
-            add(errors, f"{path}: forbidden invisible/bidi Unicode U+{cp:04X} at character {index}")
+            add(errors, f"{path}: forbidden invisible/bidi Unicode U+{codepoint:04X} at character {index}")
             break
-        if cp < 32 and ch not in "\n\r\t":
-            add(errors, f"{path}: forbidden control character U+{cp:04X}")
+        if codepoint < 32 and ch not in "\n\r\t":
+            add(errors, f"{path}: forbidden control character U+{codepoint:04X}")
             break
 
     for number, line in enumerate(text.splitlines(), start=1):
@@ -186,6 +195,8 @@ def scan_text(path: str, text: str, errors: list[str]) -> None:
 
     if DANGEROUS_SCHEME_RE.search(text):
         add(errors, f"{path}: dangerous URL scheme is forbidden")
+    if BASE64_BLOB_RE.search(text):
+        add(errors, f"{path}: long encoded/base64-like blobs are forbidden in Markdown")
 
     visible = strip_fenced_code(text)
     if "<!--" in visible or "-->" in visible:
@@ -214,12 +225,37 @@ def top_level_block(text: str, key: str) -> list[str] | None:
             return [line]
     if start is None:
         return None
+
     block: list[str] = []
     for line in lines[start:]:
         if line and not line.startswith((" ", "\t")) and not line.lstrip().startswith("#"):
             break
         block.append(line)
     return block
+
+
+def event_keys(text: str) -> set[str]:
+    block = top_level_block(text, "on")
+    if block is None:
+        return set()
+    joined = "\n".join(block)
+    return set(re.findall(r"(?m)^  ([A-Za-z0-9_]+):\s*$", joined))
+
+
+def indented_mapping(text: str, key: str, indent: int) -> list[str]:
+    lines = text.splitlines()
+    marker = " " * indent + f"{key}:"
+    for index, line in enumerate(lines):
+        if line != marker:
+            continue
+        values: list[str] = []
+        for current in lines[index + 1 :]:
+            if current.strip() and len(current) - len(current.lstrip()) <= indent:
+                break
+            if current.strip():
+                values.append(current.strip())
+        return values
+    return []
 
 
 def run_blocks(text: str) -> Iterable[str]:
@@ -233,7 +269,7 @@ def run_blocks(text: str) -> Iterable[str]:
         indent = len(match.group(1))
         inline = match.group(2)
         if inline and inline not in {"|", ">", "|-", ">-"}:
-            yield inline
+            yield inline.strip()
             index += 1
             continue
         block: list[str] = []
@@ -242,33 +278,73 @@ def run_blocks(text: str) -> Iterable[str]:
             current = lines[index]
             if current.strip() and len(current) - len(current.lstrip()) <= indent:
                 break
-            block.append(current)
+            if current.strip():
+                block.append(current.strip())
             index += 1
         yield "\n".join(block)
 
 
 def scan_workflow(path: str, text: str, errors: list[str]) -> None:
+    if path not in ALLOWED_WORKFLOWS:
+        add(errors, f"{path}: workflow file is not allowlisted")
+        return
+
+    if re.search(r"(?m)^\s+(?:container|services|defaults|working-directory):", text):
+        add(errors, f"{path}: container/services/defaults/working-directory are forbidden")
+    if re.search(r"(?m)^\s+continue-on-error:\s*true\s*$", text, re.IGNORECASE):
+        add(errors, f"{path}: continue-on-error is forbidden")
+    if re.search(r"(?m)^\s+shell:\s*", text):
+        add(errors, f"{path}: custom shell configuration is forbidden")
+
+    permission_keys = re.findall(r"(?m)^\s*permissions:\s*", text)
+    if len(permission_keys) != 1 or not text.startswith("name:"):
+        add(errors, f"{path}: exactly one top-level permissions mapping is required")
     permissions = top_level_block(text, "permissions")
-    if permissions is None:
-        add(errors, f"{path}: explicit top-level permissions are required")
-    elif permissions and permissions[0].startswith("permissions:"):
-        add(errors, f"{path}: permissions must be an explicit least-privilege mapping")
-    else:
-        block = "\n".join(permissions)
-        if re.search(r"(?m)^\s*[A-Za-z0-9_-]+:\s*write\s*$", block):
-            add(errors, f"{path}: write-capable GITHUB_TOKEN permission is forbidden")
+    if permissions is None or (permissions and permissions[0].startswith("permissions:")):
+        add(errors, f"{path}: permissions must be an explicit top-level mapping")
+    if re.search(r"(?m)^\s*[A-Za-z0-9_-]+:\s*write\s*$", text):
+        add(errors, f"{path}: write-capable GITHUB_TOKEN permission is forbidden")
+    if re.search(r"(?m)^\s*permissions:\s*(?:write-all|read-all)\s*$", text):
+        add(errors, f"{path}: scalar read-all/write-all permissions are forbidden")
 
     if "${{ secrets." in text or "secrets[" in text:
         add(errors, f"{path}: repository/environment secrets are forbidden")
     if re.search(r"(?m)^\s*runs-on:\s*.*self-hosted", text):
         add(errors, f"{path}: self-hosted runners are forbidden")
 
-    lowered = text.lower()
-    for token in FORBIDDEN_EVENT_TOKENS:
-        if re.search(rf"\b{re.escape(token)}\b", lowered):
-            add(errors, f"{path}: event/permission token '{token}' is forbidden in workflows")
-    if "pull_request_target" in lowered and path != ".github/workflows/pr-security.yml":
-        add(errors, f"{path}: pull_request_target is reserved for the deterministic PR security gate")
+    observed_events = event_keys(text)
+    expected_events = EXPECTED_EVENTS[path]
+    if observed_events != expected_events:
+        add(errors, f"{path}: workflow events must be exactly {sorted(expected_events)}; got {sorted(observed_events)}")
+
+    if path == ".github/workflows/skill-integrity.yml":
+        if "  push:\n    branches:\n      - main\n" not in text:
+            add(errors, f"{path}: push must target main only")
+        if re.search(r"(?m)^      - (?!main\s*$).+$", "\n".join(top_level_block(text, "on") or [])):
+            add(errors, f"{path}: unexpected branch/type list item in workflow events")
+        if re.search(r"(?m)^\s+env:\s*$", text):
+            add(errors, f"{path}: environment mappings are forbidden")
+        allowed_if = "if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"
+        if_lines = [line.strip() for line in text.splitlines() if line.lstrip().startswith("if:")]
+        if if_lines != [allowed_if]:
+            add(errors, f"{path}: conditional steps must match the approved scheduled-link-check condition")
+
+    if path == ".github/workflows/pr-security.yml":
+        required_ref = 'ref: ${{ github.event.pull_request.base.sha }}'
+        if required_ref not in text:
+            add(errors, f"{path}: checkout must explicitly target the trusted base SHA")
+        if "allow-unsafe-pr-checkout: true" in text:
+            add(errors, f"{path}: unsafe PR checkout is forbidden")
+        env_values = indented_mapping(text, "env", 8)
+        expected_env = {
+            "GITHUB_TOKEN: ${{ github.token }}",
+            "GITHUB_REPOSITORY: ${{ github.repository }}",
+            "PR_NUMBER: ${{ github.event.pull_request.number }}",
+        }
+        if set(env_values) != expected_env or len(env_values) != len(expected_env):
+            add(errors, f"{path}: security-step environment must contain only the approved read-only PR metadata")
+        if any(line.lstrip().startswith("if:") for line in text.splitlines()):
+            add(errors, f"{path}: conditional skipping is forbidden")
 
     checkout_count = 0
     for use in ACTION_USE_RE.findall(text):
@@ -280,28 +356,33 @@ def scan_workflow(path: str, text: str, errors: list[str]) -> None:
             add(errors, f"{path}: malformed action reference: {normalized}")
             continue
         action, ref = normalized.rsplit("@", 1)
+        if action not in ALLOWED_ACTIONS:
+            add(errors, f"{path}: action is not allowlisted: {action}")
         if not FULL_SHA_RE.fullmatch(ref):
             add(errors, f"{path}: action must be pinned to a full commit SHA: {normalized}")
         if action == "actions/checkout":
             checkout_count += 1
 
-    persisted_false = len(re.findall(r"(?m)^\s+persist-credentials:\s*false\s*$", text))
-    if persisted_false < checkout_count:
-        add(errors, f"{path}: every actions/checkout use must set persist-credentials: false")
+    if checkout_count != 1:
+        add(errors, f"{path}: exactly one actions/checkout step is required")
+
+    with_values = indented_mapping(text, "with", 8)
+    if path == ".github/workflows/skill-integrity.yml":
+        expected_with = {"persist-credentials: false"}
+    else:
+        expected_with = {
+            'ref: ${{ github.event.pull_request.base.sha }}',
+            "persist-credentials: false",
+        }
+    if set(with_values) != expected_with or len(with_values) != len(expected_with):
+        add(errors, f"{path}: checkout options differ from the approved minimal configuration")
 
     for block in run_blocks(text):
-        stripped = block.strip()
-        if "${{" in block:
-            add(errors, f"{path}: GitHub expressions inside run blocks are forbidden; pass through env")
-        if FORBIDDEN_SHELL_RE.search(block):
-            add(errors, f"{path}: network/package-install command in run block is forbidden")
-        if any(operator in block for operator in (";", "&&", "||", "`", "$(")):
-            add(errors, f"{path}: shell chaining/substitution is forbidden in run blocks")
-        if not stripped.startswith((
-            "python3 scripts/check_repository_security.py",
-            "python3 scripts/check_skill_integrity.py",
-        )):
-            add(errors, f"{path}: workflow run command is not in the repository command allowlist")
+        if "\n" in block:
+            add(errors, f"{path}: multiline run blocks are forbidden")
+            continue
+        if block not in ALLOWED_RUN_COMMANDS:
+            add(errors, f"{path}: workflow run command is not in the exact command allowlist: {block!r}")
 
 
 def check_skill_structure(files: dict[str, str], errors: list[str], max_age_days: int) -> None:
@@ -330,15 +411,15 @@ def check_skill_structure(files: dict[str, str], errors: list[str], max_age_days
                 dates.append(date.fromisoformat(value))
             except ValueError:
                 add(errors, f"{path}: invalid audit date {value}")
-    unique = sorted(set(dates))
-    if not unique:
+    unique_dates = sorted(set(dates))
+    if not unique_dates:
         add(errors, "audit/review date not found")
-    elif len(unique) != 1:
-        add(errors, f"audit/review dates disagree: {unique}")
+    elif len(unique_dates) != 1:
+        add(errors, f"audit/review dates disagree: {unique_dates}")
     else:
-        age = (date.today() - unique[0]).days
+        age = (date.today() - unique_dates[0]).days
         if age < 0:
-            add(errors, f"audit date {unique[0]} is in the future")
+            add(errors, f"audit date {unique_dates[0]} is in the future")
         elif age > max_age_days:
             add(errors, f"audit snapshot is {age} days old (limit {max_age_days}); human review required")
 
@@ -379,8 +460,8 @@ def scan_entries(entries: list[Entry], max_age_days: int) -> list[str]:
             scan_workflow(path, text, errors)
 
     owners = files.get(".github/CODEOWNERS", "")
-    if not all(marker in owners for marker in ("/.github/", "/SKILL.md", "/AGENTS.md")):
-        add(errors, ".github/CODEOWNERS must explicitly protect .github, SKILL.md, and AGENTS.md")
+    if not all(marker in owners for marker in ("/.github/", "/SKILL.md", "/AGENTS.md", "/scripts/")):
+        add(errors, ".github/CODEOWNERS must explicitly protect .github, SKILL.md, AGENTS.md, and scripts")
 
     check_skill_structure(files, errors, max_age_days)
     return errors
@@ -410,7 +491,7 @@ def api_json(url: str, token: str) -> Any:
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "google-cx-agent-studio-skill-pr-security/1.0",
+            "User-Agent": "google-cx-agent-studio-skill-pr-security/1.1",
         },
     )
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -430,7 +511,7 @@ def pr_provenance_errors(repository: str, pr_number: int, token: str) -> list[st
     for item in changed:
         path = item["filename"]
         protected = path in OWNER_ONLY_FILES or path.startswith(OWNER_ONLY_PREFIXES)
-        dependabot_action_update = author == "dependabot[bot]" and path.startswith(".github/workflows/")
+        dependabot_action_update = author == "dependabot[bot]" and path in ALLOWED_WORKFLOWS
         if protected and not dependabot_action_update:
             add(errors, f"external PR author {author!r} may not modify owner-only security path: {path}")
     return errors
