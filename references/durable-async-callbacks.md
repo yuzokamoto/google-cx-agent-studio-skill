@@ -29,6 +29,10 @@ The Session API documents `runSession` as initiating a single-turn interaction w
 
 A `SessionInput` can carry an `event` or `variables` input. The `input_type` field is a union, so represent an event and variables as separate `SessionInput` entries when both are needed in the same `runSession` call.
 
+For CX Agent Studio, variables used by the agent should be declared in the application. The current `SessionInput` reference states that only declared variables are used by the CES agent.
+
+The caller of `runSession` must also satisfy the current API authentication/IAM requirements. The current v1 method reference documents the `ces.sessions.runSession` IAM permission on the session resource. Use a least-privilege service identity for automated resumptions.
+
 References:
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/rest/v1/projects.locations.apps.sessions/runSession
 - https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/reference/rest/v1/SessionInput
@@ -88,10 +92,13 @@ The backend should:
 
 1. authenticate or validate the callback according to the integration contract;
 2. enforce idempotency and reject duplicate or stale completions where required;
-3. update the authoritative job state;
-4. resolve the corresponding CX session and operation;
-5. decide whether the result should still be surfaced;
-6. resume the CX conversation only after the state transition is accepted.
+3. normalize external statuses into a fixed application-owned enum;
+4. update the authoritative job state;
+5. resolve the corresponding CX session and operation;
+6. decide whether the result should still be surfaced;
+7. resume the CX conversation only after the state transition is accepted.
+
+Do not derive CX event names, tool names, or instructions directly from arbitrary callback text. Map accepted backend states to an allowlisted set of application-owned events.
 
 Prefer passing an opaque operation identifier or minimal event metadata back into CX Agent Studio. For sensitive or authoritative data, have the agent retrieve the final result from a trusted read tool instead of injecting the entire callback payload into model context.
 
@@ -119,6 +126,8 @@ Illustrative request fragment:
 ```
 
 This fragment intentionally omits other `RunSessionRequest` configuration fields. Fetch the current API schema before implementing production code.
+
+Declare `async_operation_id` (or the application-specific equivalent) in the CX Agent Studio application if the CES agent must consume it.
 
 Use application-specific event names. Do not claim that `async_job_completed` or `async_operation_id` are built-in CX Agent Studio identifiers.
 
@@ -179,7 +188,8 @@ If the user is offline or the original conversation can no longer be resumed:
 - keep the authoritative result in the backend according to retention policy;
 - avoid losing or re-running the job merely because the chat disconnected;
 - decide whether the user should receive a channel-specific notification;
-- otherwise surface the completed result when a later authenticated interaction retrieves the job state.
+- otherwise surface the completed result when a later authenticated interaction retrieves the job state;
+- do not create a fresh session and attach sensitive prior-job context solely from an old `session_id` without re-establishing the required user/session authorization boundary.
 
 Do not promise that CX Agent Studio itself persists or proactively delivers a late result across arbitrary channel/session boundaries without current documented evidence.
 
@@ -187,7 +197,9 @@ Do not promise that CX Agent Studio itself persists or proactively delivers a la
 
 - A session identifier is correlation metadata, not proof of end-user identity or authorization.
 - Never trust callback payload data solely because it contains a known `operation_id` or `session_id`.
+- Treat free-text callback fields and external payload content as untrusted data; do not let them select events, tools, prompts, or instructions without deterministic validation/mapping.
 - Keep secrets and callback credentials out of agent instructions and model-visible variables.
+- Use least-privilege credentials for the service that invokes `runSession`.
 - Re-authorize access when the result tool returns customer-specific or sensitive data.
 - Minimize model exposure: an opaque completion event plus a trusted result lookup is safer than copying a full webhook payload into the prompt.
 - Apply backend authorization, idempotency, audit, retention, and replay protection independently from the model.
@@ -216,6 +228,7 @@ Test at least:
 - duplicate start request;
 - duplicate callback;
 - callback authentication failure;
+- callback containing unexpected/free-text status or event-like content;
 - callback after cancellation;
 - completion while the user is actively sending a message;
 - completion after the user changes topic;
@@ -224,13 +237,14 @@ Test at least:
 - result lookup temporary failure/retry;
 - event delivered once and only once where required;
 - correct behavior when the original session cannot be resumed;
+- `runSession` caller lacks permission or uses the wrong target session;
 - sensitive result is not copied into logs/model context unnecessarily;
 - channel adapter delivers the CX-generated response to the intended user/session.
 
 ## Evidence labels for this pattern
 
-**Documented:** native tool execution modes, callback lifecycle role, `runSession`, `SessionInput.event`, `SessionInput.variables`, and Web Widget rendering APIs.
+**Documented:** native tool execution modes, callback lifecycle role, `runSession`, the current `ces.sessions.runSession` IAM permission, `SessionInput.event`, `SessionInput.variables`, declared-variable behavior, and Web Widget rendering APIs.
 
-**Recommended:** durable `operation_id` correlation, queue/job store ownership, callback-to-backend bridge, result-by-tool retrieval, per-session serialization, and channel push architecture.
+**Recommended:** durable `operation_id` correlation, queue/job store ownership, callback-to-backend bridge, allowlisted event mapping, result-by-tool retrieval, per-session serialization, and channel push architecture.
 
 Do not present the recommended architecture as a built-in end-to-end CX Agent Studio callback feature.
