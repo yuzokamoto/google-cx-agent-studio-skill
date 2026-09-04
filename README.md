@@ -43,6 +43,7 @@ google-cx-agent-studio-skill/
     ├── agents-and-handoffs.md
     ├── instructions.md
     ├── tools.md
+    ├── durable-async-callbacks.md
     ├── python-runtime.md
     ├── knowledge-grounding.md
     ├── state-callbacks-determinism.md
@@ -67,6 +68,7 @@ For reproducible or production environments, prefer importing from a reviewed ta
 - OpenAPI, Python, MCP, Client Function, Data Store, File Search, Google Search, connectors, system/widget tools, and agent-as-a-tool
 - CX Agent Studio Python runtime details for executable Python tools/callbacks, including runtime globals, supported imports, callback signatures, tool-to-tool calls, and networking limits
 - Synchronous versus asynchronous tool execution
+- Durable backend jobs, external completion callbacks, session resumption, and proactive channel-delivery boundaries
 - Static and dynamic variables, session context injection, callbacks, and deterministic control
 - Fallback behavior, retries, tool/integration failures, business-negative outcomes, and escalation/end-session boundaries
 - Knowledge grounding and the boundary between RAG and authoritative transactional data
@@ -111,6 +113,7 @@ google-cx-agent-studio-skill/
     ├── agents-and-handoffs.md
     ├── instructions.md
     ├── tools.md
+    ├── durable-async-callbacks.md
     ├── python-runtime.md
     ├── knowledge-grounding.md
     ├── state-callbacks-determinism.md
