@@ -71,7 +71,8 @@ Do not invent a confirmation ceremony when the user's write intent and target en
 
 - **Architecture / multi-agent / routing** → read `references/agents-and-handoffs.md`.
 - **Instructions / prompt structure / references** → read `references/instructions.md`.
-- **Tool choice / OpenAPI / Python / MCP / connectors / async** → read `references/tools.md`.
+- **Tool choice / OpenAPI / Python / MCP / connectors / native async** → read `references/tools.md`.
+- **Durable async job / queue / external webhook or completion callback / proactive session resumption** → read `references/durable-async-callbacks.md` plus the relevant tool/state/API references.
 - **Executable Python tools or callbacks / runtime globals / callback signatures** → read `references/python-runtime.md` plus the relevant tool/state reference.
 - **FAQ / documents / RAG / website knowledge / Google Search** → read `references/knowledge-grounding.md`.
 - **Variables / callbacks / deterministic behavior / state** → read `references/state-callbacks-determinism.md`.
@@ -129,6 +130,7 @@ Do not move authoritative state into conversation history merely because the mod
 - Use **MCP** when integrating an existing Streamable HTTP MCP server or when standardized dynamic tool discovery is valuable.
 - Use **Client function** only when the action must run in client code; the server-side session waits for the client response.
 - Choose **synchronous** execution for low-latency calls that must complete before the next agent response; choose **asynchronous** when the conversation should continue while a slower call is pending.
+- Do not conflate native asynchronous tool execution with a durable external job that completes through a later webhook/callback. For the latter, use a durable backend job and the session-resumption pattern in `references/durable-async-callbacks.md`.
 - Do not expose raw enterprise payloads to the model when a smaller stable contract will do.
 
 ## Knowledge defaults
@@ -172,7 +174,7 @@ For broad configuration refactors, prefer exported configuration under source co
 Do not invent:
 
 - console field names or locations;
-- callback payload wrappers;
+- callback payload wrappers or treat a CX Python callback as an external webhook endpoint;
 - runtime tool names;
 - tool response shapes;
 - supported authentication methods;
@@ -181,6 +183,7 @@ Do not invent:
 - network reachability or private-connectivity support for a tool/runtime;
 - Python runtime APIs/import availability from generic ADK or normal CPython examples;
 - Web Widget security behavior;
+- proactive channel-delivery behavior from `runSession` unless current documentation or observed integration behavior establishes it;
 - whether a Dialogflow CX, Agent Assist, or CX Insights capability exists inside CX Agent Studio.
 
 Verify these against current official documentation or observed runtime evidence.
