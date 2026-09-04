@@ -23,9 +23,9 @@ CX Agent Studio callbacks are Python lifecycle hooks that execute at defined poi
 Reference:
 https://docs.cloud.google.com/gemini-enterprise-cx/cx-agent-studio/callback
 
-The Session API documents `runSession` as initiating a single-turn interaction with the CES agent within a session:
+The Session API documents `runSession` as initiating a single-turn interaction with the CES agent within a session. The service is `ces.googleapis.com`; the v1 REST path is:
 
-`POST https://ces.googleapis.com/v1/{config.session=projects/*/locations/*/apps/*/sessions/*}:runSession`
+`POST /v1/{config.session=projects/*/locations/*/apps/*/sessions/*}:runSession`
 
 A `SessionInput` can carry an `event` or `variables` input. The `input_type` field is a union, so represent an event and variables as separate `SessionInput` entries when both are needed in the same `runSession` call.
 
